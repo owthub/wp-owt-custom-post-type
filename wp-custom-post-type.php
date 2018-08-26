@@ -78,3 +78,35 @@ function wpl_owt_cpt_save_values($post_id, $post) {
 }
 
 add_action("save_post", "wpl_owt_cpt_save_values", 10, 2);
+
+function wpl_owt_cpt_custom_columns($columns) {
+
+    $columns = array(
+        "cb" => "<input type='checkbox'/>",
+        "title" => "Movie Title",
+        "pub_email" => "Publisher Email",
+        "pub_name" => "Publisher Name",
+        "date" => "Date"
+    );
+
+    return $columns;
+}
+
+add_action("manage_movie_posts_columns", "wpl_owt_cpt_custom_columns");
+
+function wpl_owt_cpt_custom_columns_data($column, $post_id) {
+
+    switch ($column) {
+
+        case 'pub_email':
+            $publisher_email = get_post_meta($post_id, "wpl_producer_email", true);
+            echo $publisher_email;
+            break;
+        case 'pub_name':
+            $publisher_name = get_post_meta($post_id, "wpl_producer_name", true);
+            echo $publisher_name;
+            break;
+    }
+}
+
+add_action("manage_movie_posts_custom_column", "wpl_owt_cpt_custom_columns_data", 10, 2);
