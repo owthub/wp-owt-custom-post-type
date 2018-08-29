@@ -110,3 +110,13 @@ function wpl_owt_cpt_custom_columns_data($column, $post_id) {
 }
 
 add_action("manage_movie_posts_custom_column", "wpl_owt_cpt_custom_columns_data", 10, 2);
+
+add_filter("manage_edit-movie_sortable_columns", "wpl_owt_cpt_sortable_columns");
+
+function wpl_owt_cpt_sortable_columns($columns) {
+
+    $columns['pub_email'] = "owt_email";
+    $columns["pub_name"] = "owt_name";
+    
+    return $columns;
+}
