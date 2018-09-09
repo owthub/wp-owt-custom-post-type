@@ -48,6 +48,8 @@ function wpl_owt_cpt_register_movies() {
 function wpl_owt_cpt_register_metabox() {
 
     add_meta_box("cpt-id", "Producer Details", "wpl_owt_cpt_producer_call", "movie", "side", "high");
+
+    add_meta_box("cpt-author", "Choose Author", "wpl_owt_cpt_author_call", "movie", "side", "high");
 }
 
 add_action("add_meta_boxes", "wpl_owt_cpt_register_metabox");
@@ -117,6 +119,129 @@ function wpl_owt_cpt_sortable_columns($columns) {
 
     $columns['pub_email'] = "owt_email";
     $columns["pub_name"] = "owt_name";
-    
+
     return $columns;
+}
+
+function wpl_owt_cpt_author_call($post) {
+    ?>
+    <div>
+        <label>Select Author</label>
+        <select name='ddauthor'>
+            <?php
+            $users = get_users(array(
+                "role" => "author"
+            ));
+
+            $saved_author_id = get_post_meta($post->ID, "author_id_movie", true);
+
+            foreach ($users as $index => $user) {
+                $selected = '';
+                if ($saved_author_id == $user->ID) {
+                    $selected = 'selected="selected"';
+                }
+                ?>
+                <option value='<?php echo $user->ID ?>' <?php echo $selected; ?>><?php echo $user->display_name; ?></option>
+                <?php
+            }
+            ?>
+        </select>
+    </div>
+    <?php
+}
+
+add_action("save_post", "wpl_owt_save_author_movie", 10, 2);
+
+function wpl_owt_save_author_movie($post_id, $post) {
+
+    $author_id = isset($_REQUEST['ddauthor']) ? intval($_REQUEST['ddauthor']) : "";
+
+    update_post_meta($post_id, "author_id_movie", $author_id);
+}
+
+add_action("restrict_manage_posts", "wpl_owt_author_filter_box_layout");
+
+function wpl_owt_author_filter_box_layout() {
+
+    global $typenow;
+    if ($typenow == "movie") {
+
+        $author_id = isset($_GET['filter_by_author']) ? intval($_GET['filter_by_author']) : "";
+
+        wp_dropdown_users(array(
+            "show_option_none" => "Select author",
+            "role" => "author",
+            "name" => "filter_by_author",
+            "id" => "ddfilterauthorid",
+            "selected" => $author_id
+        ));
+    }
+}
+
+add_filter("parse_query", "wpl_owt_filter_by_author");
+
+function wpl_owt_filter_by_author($query) {
+
+    global $typenow;
+    global $pagenow;
+
+    $author_id = isset($_GET['filter_by_author']) ? intval($_GET['filter_by_author']) : "";
+
+    if ($typenow == "movie" && $pagenow == "edit.php" && !empty($author_id)) {
+
+        $query->query_vars["meta_key"] = "author_id_movie";
+        $query->query_vars["meta_value"] = $author_id;
+    }
+}
+
+add_action('init', 'wpl_owt_create_movies_category');
+
+function wpl_owt_create_movies_category() {
+    register_taxonomy(
+            'movie_category', 'movie', array(
+        'label' => __('Movie Category'),
+        'rewrite' => array('slug' => 'movie_category'),
+        'hierarchical' => true,
+            )
+    );
+}
+
+add_action("restrict_manage_posts", "wpl_owt_category_filter_box");
+
+function wpl_owt_category_filter_box() {
+
+    global $typenow;
+    $show_taxonomy = "movie_category";
+
+    if ($typenow == "movie") {
+
+        $selected_movie_category_id = isset($_GET[$show_taxonomy]) ? intval($_GET[$show_taxonomy]) : "";
+
+        wp_dropdown_categories(array(
+            "show_option_all" => "Show All",
+            "name" => $show_taxonomy,
+            "selected" => $selected_movie_category_id,
+            "taxonomy" => $show_taxonomy,
+            "show_count" => true
+        ));
+    }
+}
+
+add_filter("parse_query", "wpl_owt_parse_category_fn");
+
+function wpl_owt_parse_category_fn($query) {
+
+    global $typenow;
+    global $pagenow;
+    $post_type = "movie";
+    $taxonomy = "movie_category";
+
+    $query_variables = &$query->query_vars;
+
+    if ($typenow == $post_type && $pagenow == "edit.php" && isset($query_variables[$taxonomy]) && is_numeric($query_variables[$taxonomy])) {
+
+        $term_details = get_term_by("id", $query_variables[$taxonomy], $taxonomy);
+
+        $query_variables[$taxonomy] = $term_details->slug;
+    }
 }
